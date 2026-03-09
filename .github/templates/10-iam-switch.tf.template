@@ -1,0 +1,11 @@
+module "op_suppression_list_delete_{{YYYY_MM_DD}}" {
+  count  = local.is-prod ? 1 : 0
+  source = "./module/time_limited_privilege"
+  suffix = "OP-SUPPRESSION-LIST-DELETE-{{YYYY_MM_DD}}"
+
+  emails = toset(["{{EMAIL}}"])
+  until  = "{{UNTIL_TIME}}+09:00"
+  requested_privileges = toset([
+    "{{PRIVILEGE}}",
+  ])
+}

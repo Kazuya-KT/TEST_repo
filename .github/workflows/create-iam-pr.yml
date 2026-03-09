@@ -1,0 +1,72 @@
+name: Create IAM Privilege PR from Slack
+
+on:
+  repository_dispatch:
+    types: [create_iam_pr]
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Append Terraform code and Commit
+        run: |
+          export TZ="Asia/Tokyo"
+          YYYY_MM_DD=$(date +%Y_%m_%d)
+          YYYY_MM_DD_HYPHEN=$(date +%Y-%m-%d)
+          TIME_SUFFIX=$(date +%H%M%S) # ブランチ名重複防止用の時分秒
+          
+          EMAIL="${{ github.event.client_payload.email }}"
+          UNTIL_TIME="${{ github.event.client_payload.until_time }}"
+          PRIVILEGE="${{ github.event.client_payload.privilege }}"
+          USERNAME="${EMAIL%%@*}" # アドレスの @ より前を抽出
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # ブランチ名の例: add-iam-privilege-2026-03-09-takai-174205
+          BRANCH_NAME="add-iam-privilege-${YYYY_MM_DD}-${USERNAME}-${TIME_SUFFIX}"
+          git checkout -b $BRANCH_NAME
+          
+          # 対象ファイルとテンプレートのパス
+          TARGET_FILE="./10-iam-switch.tf"
+          TEMPLATE_FILE=".github/templates/iam-switch.tf.tmpl"
+          
+          # 5. sed
+          sed -e "s/{{YYYY_MM_DD}}/${YYYY_MM_DD}/g" \
+              -e "s/{{YYYY_MM_DD_HYPHEN}}/${YYYY_MM_DD}/g" \
+              -e "s/{{EMAIL}}/${EMAIL}/g" \
+              -e "s/{{UNTIL_TIME}}/${UNTIL_TIME}/g" \
+              -e "s/{{PRIVILEGE}}/${PRIVILEGE}/g" \
+              $TEMPLATE_FILE >> $TARGET_FILE
+          
+          git add $TARGET_FILE
+          git commit -m "feat: ${USERNAME} への一時的なIAM権限追加 (${PRIVILEGE})"
+          git push origin $BRANCH_NAME
+          
+          # 次のstep用の環境変数
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "USERNAME=$USERNAME" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head ${{ env.BRANCH_NAME }} \
+            --title "【自動生成】一時IAM権限追加（${{ env.USERNAME }}）" \
+            --body "## 概要
+          Slackから一時的な権限強化の申請がありました
+          
+          ## 申請内容
+          * **対象者:** \`${{ github.event.client_payload.email }}\`
+          * **追加権限:** \`${{ github.event.client_payload.privilege }}\`
+          * **有効期限:** \`${{ github.event.client_payload.until_time }}+09:00\`"
+          
