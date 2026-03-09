@@ -52,7 +52,7 @@ jobs:
           
           # 対象ファイルとテンプレートのパス
           TARGET_FILE="./10-iam-switch.tf"
-          TEMPLATE_FILE=".github/templates/10-iam-switch.tf.tmpl"
+          TEMPLATE_FILE=".github/templates/10-iam-switch.tf.template"
           
           # 5. sed
           sed -e "s/{{YYYY_MM_DD}}/${YYYY_MM_DD}/g" \
