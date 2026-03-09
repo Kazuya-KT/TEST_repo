@@ -1,8 +1,25 @@
 name: Create IAM Privilege PR from Slack
 
 on:
-  repository_dispatch:
-    types: [create_iam_pr]
+  on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: '対象者のメールアドレス'
+        required: true
+        type: string
+      until_time:
+        description: '有効期限 (例: 2026-03-09T18:00:00)'
+        required: true
+        type: string
+      privilege:
+        description: '付与する権限'
+        required: true
+        type: choice # ドロップダウンリストになる！
+        options:
+          - AdministratorAccess
+          - ReadOnlyAccess
+          - PowerUserAccess
 
 jobs:
   create-pr:
@@ -22,11 +39,11 @@ jobs:
           YYYY_MM_DD_HYPHEN=$(date +%Y-%m-%d)
           TIME_SUFFIX=$(date +%H%M%S) # ブランチ名重複防止用の時分秒
           
-          EMAIL="${{ github.event.client_payload.email }}"
-          UNTIL_TIME="${{ github.event.client_payload.until_time }}"
-          PRIVILEGE="${{ github.event.client_payload.privilege }}"
-          USERNAME="${EMAIL%%@*}" # アドレスの @ より前を抽出
-          
+          EMAIL="${{ inputs.email }}"
+          UNTIL_TIME="${{ inputs.until_time }}"
+          PRIVILEGE="${{ inputs.privilege }}"
+          USERNAME="${EMAIL%%@*}"
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
