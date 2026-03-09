@@ -1,7 +1,6 @@
 name: Create IAM Privilege PR from Slack
 
 on:
-  on:
   workflow_dispatch:
     inputs:
       email:
